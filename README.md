@@ -1,6 +1,8 @@
 # Fabularium
 
-This is the source code for the Fabularium app at https://play.google.com/store/apps/details?id=com.luxlunae.fabularium.
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/io.davidar.fabularium/)
 
 ## About
 
