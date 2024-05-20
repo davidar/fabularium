@@ -303,6 +303,12 @@ public abstract class GLKNonPairM extends GLKWindowM implements GLKOutputStream 
         mWriteCount += s.length();
     }
 
+    public void echoString(@NonNull String s) {
+        if (mEchoee != null) {
+            mEchoee.putString(s);
+        }
+    }
+
     @Override
     public void putChar(int ch) {
         if (mEchoee != null) {
