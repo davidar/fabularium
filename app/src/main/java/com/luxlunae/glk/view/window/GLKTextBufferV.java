@@ -166,6 +166,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
             if (mModel.mInputBB != null) {
                 String input = mModel.mInput.toString();
                 announceForAccessibility(input);
+                mModel.echoString(input);
                 len = mModel.mCharsetMgr.putGLKString(input, mModel.mInputBB, mModel.mIs32Bit, false);
             } else {
                 len = 0;
@@ -430,6 +431,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
                 // by the user (possibly empty) - and we're supposed to
                 // show it, we now move onto the next line
                 mOutput.append('\n');
+                mModel.echoString("\n");
             }
         } else {
             clearInput();
