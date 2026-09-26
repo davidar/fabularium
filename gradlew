@@ -66,6 +66,40 @@ esac
 
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
+# Prefer a JDK 8 install for this old Gradle/AGP toolchain. A user-level
+# org.gradle.java.home (e.g. Android Studio's current JBR) overrides JAVA_HOME
+# and breaks Gradle 5.4.1, so force a compatible home via a system property.
+find_jdk8_home () {
+    if [ -n "$FABULARIUM_JAVA_HOME" ] && [ -x "$FABULARIUM_JAVA_HOME/bin/java" ]; then
+        echo "$FABULARIUM_JAVA_HOME"
+        return
+    fi
+    for candidate in \
+        "/Library/Java/JavaVirtualMachines/zulu-8.jdk/Contents/Home" \
+        "/Library/Java/JavaVirtualMachines/jdk1.8.0_*/Contents/Home" \
+        "/Library/Java/JavaVirtualMachines/temurin-8.jdk/Contents/Home" \
+        "/usr/lib/jvm/java-8-openjdk" \
+        "/usr/lib/jvm/java-1.8.0-openjdk"
+    do
+        for resolved in $candidate; do
+            if [ -x "$resolved/bin/java" ]; then
+                echo "$resolved"
+                return
+            fi
+        done
+    done
+    if command -v /usr/libexec/java_home >/dev/null 2>&1; then
+        /usr/libexec/java_home -v 1.8 2>/dev/null && return
+    fi
+}
+
+JDK8_HOME=`find_jdk8_home`
+if [ -n "$JDK8_HOME" ]; then
+    JAVA_HOME="$JDK8_HOME"
+    export JAVA_HOME
+    DEFAULT_JVM_OPTS="$DEFAULT_JVM_OPTS \"-Dorg.gradle.java.home=$JDK8_HOME\""
+fi
+
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
     if [ -x "$JAVA_HOME/jre/sh/java" ] ; then

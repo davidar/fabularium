@@ -36,9 +36,9 @@ jmp_buf term_buf;
 
 void cleanup(int argc, const char** argv, int sout, int serr) {
   for (int i = 0; i < argc; i++) {
-    free(argv[i]);
+    free((void *)argv[i]);
   }
-  free(argv);
+  free((void *)argv);
 
   /* restore stdout and stderr */
   fflush(NULL);

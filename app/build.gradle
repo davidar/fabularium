@@ -3,11 +3,19 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 28
     buildToolsVersion '28.0.3'
+    // Prefer an NDK with darwin-arm64 host tools; NDK 21's x86_64 ar
+    // aborts on modern macOS/Apple Silicon.
+    ndkVersion '27.0.12077973'
 
     defaultConfig {
         applicationId 'io.davidar.fabularium'
         minSdkVersion 16
         targetSdkVersion 28
+        externalNativeBuild {
+            cmake {
+                version '3.10.2'
+            }
+        }
     }
 
     buildTypes {
@@ -18,9 +26,15 @@ android {
         }
     }
 
+    // AGP 3.5 looks for removed per-ABI strip toolchains that modern NDKs no longer ship.
+    packagingOptions {
+        doNotStrip '**/*.so'
+    }
+
     externalNativeBuild {
         cmake {
             path 'src/main/jni/CMakeLists.txt'
+            version '3.10.2'
         }
     }
 }
@@ -31,4 +45,11 @@ dependencies {
     implementation 'com.android.support:design:28.0.0'
     implementation 'android.arch.lifecycle:extensions:1.1.1'
     implementation 'com.github.tony19:named-regexp:0.2.5'
+}
+
+// AGP 3.5's strip task expects removed per-ABI NDK toolchains.
+tasks.whenTaskAdded { task ->
+    if (task.name.startsWith('strip') && task.name.endsWith('DebugSymbols')) {
+        task.enabled = false
+    }
 }

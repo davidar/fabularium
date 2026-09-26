@@ -22,6 +22,21 @@
 # This ensures that a certain set of CMake features is available to your build.
 cmake_minimum_required(VERSION 3.4.1)
 
+# Newer NDK clangs treat several legacy C/C++ issues as errors.
+# -fcommon restores pre-GCC-10 / pre-LLD behavior for tentative definitions
+# in headers (needed by alan3 and similar interpreters).
+add_compile_options(
+    -fcommon
+    -Wno-error=int-conversion
+    -Wno-error=implicit-function-declaration
+    -Wno-error=incompatible-pointer-types
+    -Wno-deprecated-non-prototype
+    -Wno-register
+)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_EXTENSIONS ON)
+
 function(addprefix var prefix)
    set(listVar "")
    foreach(f ${ARGN})

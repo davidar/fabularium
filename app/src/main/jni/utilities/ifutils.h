@@ -19,7 +19,7 @@
  */
 
 /* Load the main function dynamically */
-typedef void* (*p_main)();
+typedef int (*p_main)(int argc, const char **argv);
 
 /* Send all exit calls to our custom exit handler */
 #define exit(x) __wrap_exit(x)
