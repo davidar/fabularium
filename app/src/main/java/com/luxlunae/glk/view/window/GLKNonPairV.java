@@ -21,9 +21,9 @@ package com.luxlunae.glk.view.window;
 
 import android.content.Context;
 import android.os.Build;
-import android.support.annotation.CallSuper;
-import android.support.annotation.NonNull;
-import android.support.v4.view.GestureDetectorCompat;
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
+import androidx.core.view.GestureDetectorCompat;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityEvent;

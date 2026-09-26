@@ -20,7 +20,7 @@
 
 package com.luxlunae.bebek.controller;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.luxlunae.bebek.model.MAdventure;
 import com.luxlunae.bebek.view.MView;

@@ -19,7 +19,7 @@
  */
 package com.luxlunae.glk.model.stream;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import java.nio.ByteBuffer;
 

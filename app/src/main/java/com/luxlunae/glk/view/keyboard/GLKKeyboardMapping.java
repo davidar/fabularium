@@ -20,8 +20,8 @@
 
 package com.luxlunae.glk.view.keyboard;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.luxlunae.fabularium.R;
 import com.luxlunae.glk.GLKConstants;

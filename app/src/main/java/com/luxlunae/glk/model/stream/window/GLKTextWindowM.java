@@ -21,9 +21,9 @@ package com.luxlunae.glk.model.stream.window;
 
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.support.annotation.CallSuper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.text.TextPaint;
 import android.util.DisplayMetrics;
 

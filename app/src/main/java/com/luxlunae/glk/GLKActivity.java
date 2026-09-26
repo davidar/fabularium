@@ -20,7 +20,7 @@
 package com.luxlunae.glk;
 
 import android.annotation.SuppressLint;
-import android.arch.lifecycle.ViewModelProviders;
+import androidx.lifecycle.ViewModelProvider;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -30,10 +30,10 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.speech.tts.TextToSpeech;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.AlertDialog;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentActivity;
+import androidx.appcompat.app.AlertDialog;
 import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -121,7 +121,7 @@ public class GLKActivity extends FragmentActivity
         if (!gameFormat.equals("html")) {
             // The first time this is called it creates a new ViewModel instance
             // When called again during same application lifecycle, it will return pre-existing instance
-            mModel = ViewModelProviders.of(this).get(GLKModel.class);
+            mModel = new ViewModelProvider(this).get(GLKModel.class);
         }
 
         if (savedInstanceState == null) {

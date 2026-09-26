@@ -21,7 +21,7 @@
 
 package com.luxlunae.bebek.model.collection;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.luxlunae.bebek.model.MAction;
 import com.luxlunae.bebek.model.MAdventure;

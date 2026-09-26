@@ -20,7 +20,7 @@
 package com.luxlunae.glk.model.stream.sound;
 
 import android.media.MediaPlayer;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.luxlunae.glk.model.stream.GLKStream;
 

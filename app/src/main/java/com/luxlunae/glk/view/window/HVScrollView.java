@@ -24,11 +24,11 @@ import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.support.annotation.ColorInt;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.content.res.ResourcesCompat;
-import android.support.v4.view.ScrollingView;
+import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
+import androidx.core.view.ScrollingView;
 import android.util.TypedValue;
 import android.view.InputDevice;
 import android.view.MotionEvent;
@@ -44,7 +44,7 @@ import android.widget.OverScroller;
 
 import com.luxlunae.fabularium.R;
 
-import static android.support.v4.widget.ViewDragHelper.INVALID_POINTER;
+import static androidx.customview.widget.ViewDragHelper.INVALID_POINTER;
 
 // A view that can scroll its content both horizontally and vertically
 // Modified code from ScrollView and HorizontalScrollView
