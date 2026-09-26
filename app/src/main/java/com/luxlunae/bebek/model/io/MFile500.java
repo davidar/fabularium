@@ -21,7 +21,7 @@
 
 package com.luxlunae.bebek.model.io;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.luxlunae.bebek.MGlobals;
 import com.luxlunae.bebek.controller.MDebugger;

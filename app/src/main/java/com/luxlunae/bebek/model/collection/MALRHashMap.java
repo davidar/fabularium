@@ -21,8 +21,8 @@
 
 package com.luxlunae.bebek.model.collection;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.code.regexp.Matcher;
 import com.google.code.regexp.Pattern;

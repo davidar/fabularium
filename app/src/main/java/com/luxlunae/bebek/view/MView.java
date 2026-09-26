@@ -24,8 +24,8 @@ package com.luxlunae.bebek.view;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Point;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.luxlunae.bebek.MGlobals;
 import com.luxlunae.bebek.model.MAdventure;

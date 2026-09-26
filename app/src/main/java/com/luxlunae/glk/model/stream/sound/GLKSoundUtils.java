@@ -19,7 +19,7 @@
  */
 package com.luxlunae.glk.model.stream.sound;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.luxlunae.glk.GLKLogger;
 import com.luxlunae.glk.GLKUtils;

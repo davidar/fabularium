@@ -23,8 +23,8 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.DialogFragment;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.DialogFragment;
 import android.view.LayoutInflater;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -73,7 +73,7 @@ public class UrlDialogFragment extends DialogFragment {
         view.loadUrl(mUrl);
 
         // N.B. For now we do not set the dialog title for cosmetic reasons
-        return new AlertDialog.Builder(getActivity(), R.style.Theme_AppCompat_Light_Dialog_Alert)
+        return new AlertDialog.Builder(getActivity(), androidx.appcompat.R.style.Theme_AppCompat_Light_Dialog_Alert)
                 .setView(view)
                 .setPositiveButton(android.R.string.ok, null)
                 .create();

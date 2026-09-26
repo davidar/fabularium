@@ -19,7 +19,7 @@
  */
 package com.luxlunae.glk.view.window;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.luxlunae.glk.model.stream.window.GLKWindowM;
 

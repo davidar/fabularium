@@ -20,7 +20,7 @@
 
 package com.luxlunae.fabularium.explore;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import java.io.File;
 

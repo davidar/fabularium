@@ -19,7 +19,7 @@
  */
 package com.luxlunae.glk.model.stream.file;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.luxlunae.glk.GLKConstants;
 import com.luxlunae.glk.model.GLKModel;

@@ -19,8 +19,8 @@
  */
 package com.luxlunae.glk.model.html;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * This tokeniser implements a simplified version of the HTML 5 tokeniser state machine

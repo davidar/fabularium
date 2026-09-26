@@ -1,55 +1,65 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion '28.0.3'
-    // Prefer an NDK with darwin-arm64 host tools; NDK 21's x86_64 ar
-    // aborts on modern macOS/Apple Silicon.
-    ndkVersion '27.0.12077973'
+    namespace 'com.luxlunae.fabularium'
+    compileSdk 36
+    ndkVersion '28.2.13676358'
 
     defaultConfig {
         applicationId 'io.davidar.fabularium'
-        minSdkVersion 16
-        targetSdkVersion 28
-        externalNativeBuild {
-            cmake {
-                version '3.10.2'
-            }
-        }
+        minSdk 21
+        targetSdk 28
+        versionCode 27
+        versionName '1.5.1'
     }
 
     buildTypes {
         release {
             shrinkResources true
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
-    // AGP 3.5 looks for removed per-ABI strip toolchains that modern NDKs no longer ship.
-    packagingOptions {
-        doNotStrip '**/*.so'
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     externalNativeBuild {
         cmake {
             path 'src/main/jni/CMakeLists.txt'
-            version '3.10.2'
+            version '3.22.1'
         }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    lint {
+        abortOnError false
     }
 }
 
 dependencies {
-    implementation 'com.android.support:support-annotations:28.0.0'
-    implementation 'com.android.support:appcompat-v7:28.0.0'
-    implementation 'com.android.support:design:28.0.0'
-    implementation 'android.arch.lifecycle:extensions:1.1.1'
+    implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.customview:customview:1.1.0'
+    implementation 'androidx.viewpager:viewpager:1.1.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.fragment:fragment:1.8.9'
+    implementation 'androidx.loader:loader:1.1.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.9.4'
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime:2.9.4'
     implementation 'com.github.tony19:named-regexp:0.2.5'
-}
-
-// AGP 3.5's strip task expects removed per-ABI NDK toolchains.
-tasks.whenTaskAdded { task ->
-    if (task.name.startsWith('strip') && task.name.endsWith('DebugSymbols')) {
-        task.enabled = false
-    }
 }

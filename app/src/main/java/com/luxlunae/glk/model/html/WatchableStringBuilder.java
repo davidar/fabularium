@@ -20,7 +20,7 @@
 
 package com.luxlunae.glk.model.html;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.text.SpannableStringBuilder;
 
 public class WatchableStringBuilder extends SpannableStringBuilder {

@@ -19,7 +19,7 @@
  */
 package com.luxlunae.glk.model;
 
-import android.support.annotation.Keep;
+import androidx.annotation.Keep;
 
 @Keep
 public class TADSBannerInfo {
