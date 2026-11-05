@@ -1421,7 +1421,8 @@ public class GLKInputConnection implements InputConnection {
         if (DEBUG_INPUT_CONNECTION) {
             FabLogger.debug("GLKInputConnection: syncInputBuffer: finalise = " + finalise);
         }
-        if (mEditable != null && mView != null) {
+        if (mView != null) {
+            getEditable(); // A recreated connection may submit the retained text before any edit.
             mView.clearInputBuffer();
 
             int len = mEditable.length();

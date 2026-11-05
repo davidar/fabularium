@@ -40,6 +40,7 @@ import android.widget.Toast;
 
 import com.luxlunae.fabularium.PreferencesActivity;
 import com.luxlunae.fabularium.PreferencesActivity.ParcelableSharedPrefs;
+import com.luxlunae.glk.GLKActivity;
 import com.luxlunae.glk.GLKCharsetManager;
 import com.luxlunae.glk.GLKConstants;
 import com.luxlunae.glk.GLKLogger;
@@ -61,6 +62,8 @@ import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.nio.charset.Charset;
+import java.util.UUID;
 import java.util.HashMap;
 import java.util.IllformedLocaleException;
 import java.util.Locale;
@@ -841,6 +844,19 @@ public class GLKModel extends AndroidViewModel {
             }
         }
 
+        if (mTerpID == GLKController.TerpType.BOCFEL && mTerpArgs != null &&
+                sharedPref.getBoolean(PreferencesActivity.KEY_PREF_AUTOSAVE, true)) {
+            // Private storage keeps automatic checkpoints separate from manual saves.
+            File directory = getApplication().getDir("autosaves", Context.MODE_PRIVATE);
+            String name = UUID.nameUUIDFromBytes(mIFID.getBytes(Charset.forName("UTF-8"))).toString();
+            String[] args = new String[mTerpArgs.length + 2];
+            args[0] = mTerpArgs[0];
+            args[1] = "-q";
+            args[2] = new File(directory, name + ".bfms").getAbsolutePath();
+            System.arraycopy(mTerpArgs, 1, args, 3, mTerpArgs.length - 1);
+            mTerpArgs = args;
+        }
+
         GLKLogger.flush();
     }
 
@@ -1480,6 +1496,12 @@ public class GLKModel extends AndroidViewModel {
             }
         }
         GLKLogger.warn("GLKModel: Couldn't update View as have lost reference to screen!");
+    }
+
+    @Nullable
+    public GLKActivity getActivity() {
+        GLKScreen screen = mScreen == null ? null : mScreen.get();
+        return screen == null ? null : GLKUtils.getActivityForView(screen);
     }
 
     public void attachToScreen(GLKScreen scr) {

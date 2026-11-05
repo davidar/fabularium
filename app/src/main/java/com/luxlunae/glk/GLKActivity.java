@@ -23,6 +23,7 @@ import android.annotation.SuppressLint;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.MutableContextWrapper;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.os.Build;
@@ -35,6 +36,8 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AlertDialog;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -78,6 +81,45 @@ public class GLKActivity extends FragmentActivity
     private boolean mScreenReady = false;
     private boolean mTTSDone = true;
     private boolean mDebuggingMode = false;
+
+    private static final class RetainedGame {
+        final View content;
+        final GLKScreen screen;
+        final GLKKeyboardView keyboard;
+        final Thread controller;
+
+        RetainedGame(GLKActivity activity) {
+            content = ((ViewGroup) activity.findViewById(android.R.id.content)).getChildAt(0);
+            screen = activity.mScreen;
+            keyboard = activity.mKeyboardView;
+            controller = activity.mController;
+        }
+    }
+
+    @Override
+    public Object onRetainCustomNonConfigurationInstance() {
+        // Text history and unsubmitted input live in the views, not just the model.
+        return mScreen == null ? null : new RetainedGame(this);
+    }
+
+    private boolean configureGameWindow() {
+        Window win = getWindow();
+        if (win == null) {
+            GLKLogger.error("GLKActivity: cannot get window.");
+            finish();
+            return false;
+        }
+        if ((mModel.mUsingHardwareKeyboard && !DEBUG_SOFT_KEYBOARD) ||
+                mModel.mUseBuiltinKeyboard || mModel.mKeyboardOff) {
+            requestWindowFeature(Window.FEATURE_NO_TITLE);
+            win.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        } else {
+            // Android does not resize fullscreen windows for a system keyboard.
+            win.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE |
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
+        return true;
+    }
 
     private static int getBundleSizeInBytes(Bundle bundle) {
         Parcel parcel = Parcel.obtain();
@@ -124,7 +166,10 @@ public class GLKActivity extends FragmentActivity
             mModel = ViewModelProviders.of(this).get(GLKModel.class);
         }
 
-        if (savedInstanceState == null) {
+        RetainedGame game = (RetainedGame) getLastCustomNonConfigurationInstance();
+        // A saved Bundle survives process death, but a retained live game does not.
+        if (game == null && (savedInstanceState == null || (mModel != null && mModel.mGamePath == null))) {
+            if (savedInstanceState != null) GLKLogger.debug("Reinitialising game after process death.");
             GLKLogger.debug("Creating new GLKActivity...");
             String gamePath = intent.getStringExtra(MainActivity.GAME_PATH);
             if (gamePath == null) {
@@ -217,67 +262,21 @@ public class GLKActivity extends FragmentActivity
                 // 1. Create the model
                 mModel.initialise(sharedPref, gamePath, gameFormat, gameIFID);
 
-                // 2. Create the view
-                if ((mModel.mUsingHardwareKeyboard && !DEBUG_SOFT_KEYBOARD) || mModel.mUseBuiltinKeyboard || mModel.mKeyboardOff) {
-                    // We can show the game full screen for these cases
-                    // Note - we can't show the game full screen if the
-                    // user wants their system keyboard, because the game window
-                    // won't resize when the system keyboard pops up. Google says this
-                    // is the intended behaviour, without explaining why:
-                    //
-                    //   https://developer.android.com/reference/android/view/WindowManager.LayoutParams.html#FLAG_FULLSCREEN
-                    //
-                    // See also:
-                    //
-                    //  https://stackoverflow.com/questions/7417123/android-how-to-adjust-layout-in-full-screen-mode-when-softkeyboard-is-visible
-                    //  https://issuetracker.google.com/issues/36911528
-                    //
-                    // If lack of full-screen bothers you, for now you'll just have to use the built-in keyboard instead.
-                    requestWindowFeature(Window.FEATURE_NO_TITLE);
-                    Window win = getWindow();
-                    if (win == null) {
-                        // getWindow() may return NULL "if the activity is not visual". Not sure what that means, in the Android
-                        // source code it returns mWindow which is set when the internal function attach() is called. Anyway, to
-                        // be safe just check here and die if necessary.
-                        GLKLogger.error("GLKActivity: cannot get reference to underlying window object. Cannot run game, sorry.");
-                        finish();
-                        return;
-                    }
-                    win.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-                }
-
-                if ((mModel.mUsingHardwareKeyboard && !DEBUG_SOFT_KEYBOARD) || mModel.mKeyboardOff) {
-                    // don't display any soft keyboard as we are either using the hardware keyboard or
-                    // the user has turned off the keyboard via fab.ini
-                    mScreen = new GLKScreen(this);
+                // 2. Create the view with a context that can follow activity recreation.
+                if (!configureGameWindow()) return;
+                MutableContextWrapper viewContext = new MutableContextWrapper(this);
+                if (mModel.mUseBuiltinKeyboard && (!mModel.mUsingHardwareKeyboard || DEBUG_SOFT_KEYBOARD) && !mModel.mKeyboardOff) {
+                    setContentView(LayoutInflater.from(this).cloneInContext(viewContext)
+                            .inflate(R.layout.glk_display, null));
+                    mScreen = findViewById(GLKConstants.NULL);
+                    mKeyboardView = findViewById(R.id.glk_keyboard);
+                    mKeyboardView.setView(mScreen);
+                    mKeyboardView.setKeyboardMappings(mModel.mKeyboardMappings);
+                    mKeyboardView.resetKeyboard();
+                } else {
+                    mScreen = new GLKScreen(viewContext);
                     mKeyboardView = null;
                     setContentView(mScreen);
-                } else {
-                    // display a soft keyboard
-                    if (mModel.mUseBuiltinKeyboard) {
-                        // display our built-in keyboard (integrate into our content view)
-                        setContentView(R.layout.glk_display);
-                        mScreen = findViewById(GLKConstants.NULL);
-                        mKeyboardView = findViewById(R.id.glk_keyboard);
-                        mKeyboardView.setView(mScreen);
-                        mKeyboardView.setKeyboardMappings(mModel.mKeyboardMappings);
-                        mKeyboardView.resetKeyboard();
-                    } else {
-                        // display the system keyboard
-                        mScreen = new GLKScreen(this);
-                        mKeyboardView = null;
-                        Window win = getWindow();
-                        if (win == null) {
-                            // getWindow() may return NULL "if the activity is not visual". Not sure what that means, in the Android
-                            // source code it returns mWindow which is set when the internal function attach() is called. Anyway, to
-                            // be safe just check here and die if necessary.
-                            GLKLogger.error("GLKActivity: cannot get reference to underlying window object. Cannot run game, sorry.");
-                            finish();
-                            return;
-                        }
-                        win.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
-                        setContentView(mScreen);
-                    }
                 }
                 mScreen.setWindowMargins(mModel.mDefaultWindowMarginsPX);
                 mScreen.setBackgroundColor(mModel.mBackgroundColor);
@@ -287,7 +286,7 @@ public class GLKActivity extends FragmentActivity
                 mModel.attachToFragmentManager(getFragmentManager());
 
                 // 3) Create the controller thread
-                mController = GLKController.create(mModel, this);
+                mController = GLKController.create(mModel);
 
                 // Set up text to speech if the user has requested it.
                 if (mModel.mEnableTextToSpeech) {
@@ -303,24 +302,37 @@ public class GLKActivity extends FragmentActivity
                 }
             }
         } else {
-            // Activity is restarting after being shut down
-            // Here are the state fields we need to consider:
-            //   1. mModel - already restored as it extends AndroidViewModel
-            //   2. mScreen - should be restored automatically as it is part of the view hierarchy
-            //   3. mKeyboardView - ditto
-            //   4. mController - a bit trickier, but as this is basically a JNI thread seems like it
-            //      won't actually get terminated anyway...? Not sure...?
-            //      See https://stackoverflow.com/questions/11400853/life-span-of-jni-c-heap-in-an-android-app
-            GLKLogger.debug("Restoring state of GLKActivity...");
-
-            // refresh the volatile references held by mModel
+            if (game == null) {
+                GLKLogger.error("GLKActivity: missing retained game UI.");
+                finish();
+                return;
+            }
+            GLKLogger.debug("Reattaching live game after activity recreation.");
+            mScreen = game.screen;
+            mKeyboardView = game.keyboard;
+            mController = game.controller;
+            mScreenReady = true;
+            ((MutableContextWrapper) mScreen.getContext()).setBaseContext(this);
+            if (!configureGameWindow()) return;
+            ViewGroup parent = (ViewGroup) game.content.getParent();
+            if (parent != null) parent.removeView(game.content);
+            setContentView(game.content);
+            mScreen.setResizeCallback(this);
+            mModel.attachToScreen(mScreen);
             mModel.attachToFragmentManager(getFragmentManager());
+            GLKWindowV focus = mScreen.getFocusedWindow();
+            if (focus != null) ((View) focus).requestFocus();
+            if (mController != null && mController.getState() == Thread.State.TERMINATED) {
+                finish();
+                return;
+            }
 
             // Set up text to speech if the user has requested it.
             if (mModel.mEnableTextToSpeech) {
                 // First check if speech resources are available
                 // as per recommendation on official Android developer's blog
                 // at https://android-developers.googleblog.com/2009/09/introduction-to-text-to-speech-in.html
+                mTTSDone = false;
                 Intent checkIntent = new Intent();
                 checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
                 startActivityForResult(checkIntent, CHECK_TTS_DATA);
@@ -525,15 +537,6 @@ public class GLKActivity extends FragmentActivity
                 mScreen = null;
             }
 
-            if (mTts != null) {
-                // From the Android developer docs for the TextToSpeech class:
-                //   "Releases the resources used by the TextToSpeech engine. It is good practice
-                //    for instance to call this method in the onDestroy() method of an Activity
-                //    so the TextToSpeech engine can be cleanly stopped."
-                mTts.shutdown();
-                mTts = null;
-            }
-
             // We assume by this stage terp and model already shutdown
             // Now we just need to shutdown the View and any other UI stuff,
             // then join back the threads
@@ -552,8 +555,14 @@ public class GLKActivity extends FragmentActivity
 
             GLKLogger.debug("Shutting down logger and finishing...");
             GLKLogger.shutdown();
-        } else {
-            GLKLogger.error("FIXME: GLKActivity: onDestroy() called by system to save memory...");
+        } else if (mScreen != null) {
+            mScreen.setResizeCallback(null);
+            ((MutableContextWrapper) mScreen.getContext()).setBaseContext(getApplicationContext());
+        }
+        mScreenReady = false;
+        if (mTts != null) {
+            mTts.shutdown();
+            mTts = null;
         }
         super.onDestroy();
     }
@@ -604,12 +613,7 @@ public class GLKActivity extends FragmentActivity
                 // ready to boot it up.
                 if (mTTSDone) {
                     if (mController != null) {
-                        try {
-                            mController.start();
-                        } catch (IllegalThreadStateException e) {
-                            // thread has already started - just leave it
-                            GLKLogger.warn("GLKActivity: onScreenSizeChanged: trying to start a thread that has already started!");
-                        }
+                        if (mController.getState() == Thread.State.NEW) mController.start();
                     } else {
                         GLKLogger.error("GLKActivity: onScreenSizeChanged: Cannot start terp as the controller object is null,");
                         finish();
@@ -868,7 +872,7 @@ public class GLKActivity extends FragmentActivity
             // onScreenSizeChanged() callback. We assume onInit and onScreenSizeChanged will
             // be called by the same thread (the UI / main thread) so no synchronisation is needed.
             if (mController != null) {
-                mController.start();
+                if (mController.getState() == Thread.State.NEW) mController.start();
             } else {
                 GLKLogger.error("GLKActivity: onInit (TTS): Cannot start terp as the controller object is null,");
                 finish();

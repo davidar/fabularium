@@ -24,6 +24,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Process;
 import android.support.annotation.Keep;
 import android.support.annotation.NonNull;
@@ -144,8 +146,8 @@ public final class GLKController {
      *          Returns a Thread object ready for use; simply call run() when you wish to
      *          start it.
      */
-    public static Thread create(@NonNull GLKModel m, @NonNull GLKActivity a) {
-        return new Thread(new RunnableTerp(m, a));
+    public static Thread create(@NonNull GLKModel m) {
+        return new Thread(new RunnableTerp(m));
     }
 
     /**
@@ -4383,12 +4385,9 @@ public final class GLKController {
     private static class RunnableTerp implements Runnable {
         @NonNull
         private final GLKModel mModel;
-        @NonNull
-        private final GLKActivity mAct;
 
-        RunnableTerp(@NonNull GLKModel m, @NonNull GLKActivity a) {
+        RunnableTerp(@NonNull GLKModel m) {
             mModel = m;
-            mAct = a;
         }
 
         private void fatalError(@NonNull String error) {
@@ -4499,10 +4498,11 @@ public final class GLKController {
                 GLKLogger.shutdown();
                 Process.killProcess(Process.myPid());
             } else {
-                mAct.runOnUiThread(new Runnable() {
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        mAct.finish();
+                        GLKActivity activity = mModel.getActivity();
+                        if (activity != null) activity.finish();
                     }
                 });
             }

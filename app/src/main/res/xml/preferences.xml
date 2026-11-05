@@ -18,6 +18,11 @@
   ~ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreference
+        android:defaultValue="true"
+        android:key="pref_autosave"
+        android:title="Autosave and resume"
+        android:summary="Automatically save and resume supported games when reopened. Currently supports Bocfel Z-code (except version 6). Changes apply next time you open a game. Turning this off keeps existing checkpoints but neither loads nor updates them." />
     <PreferenceScreen android:title="Typography">
         <PreferenceCategory android:title="Main Screen">
             <EditTextPreference

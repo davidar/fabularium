@@ -296,10 +296,8 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
             mLastFlush = mOutputBuffer.toString().trim();
             mLastFlush = mLastFlush.replaceAll(">\\Z", "What now?");
             if (mLastFlush != null) {
-                Context c = getContext();
-                if (c instanceof GLKActivity) {
-                    ((GLKActivity) c).speakText(mLastFlush);
-                }
+                GLKActivity activity = GLKUtils.getActivityForView(this);
+                if (activity != null) activity.speakText(mLastFlush);
 
                 // Also ensure we announce this to users that have accessibility enabled
                 // (e.g. Google TalkBack)

@@ -60,6 +60,7 @@ public class PreferencesActivity extends Activity {
 
     public static final String KEY_PREF_SERVER_URL = "pref_serverURL";
     public static final String KEY_PREF_BUILTIN_KEYBOARD = "pref_useBuiltinKeyboard";
+    public static final String KEY_PREF_AUTOSAVE = "pref_autosave";
 
     public static final String KEY_PREF_HTML_ENABLE_JS = "pref_htmlEnableJavascript";
     public static final String KEY_PREF_HTML_ENABLE_DOM = "pref_htmlEnableDomStorageAPI";
