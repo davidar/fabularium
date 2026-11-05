@@ -3,11 +3,14 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 28
     buildToolsVersion '28.0.3'
+    useLibrary 'android.test.runner', false
+    useLibrary 'android.test.base', false
 
     defaultConfig {
         applicationId 'io.davidar.fabularium'
         minSdkVersion 16
         targetSdkVersion 28
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
 
     buildTypes {
