@@ -23,22 +23,34 @@ import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Path;
 import android.graphics.Point;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v7.app.AlertDialog;
 import android.text.DynamicLayout;
 import android.text.Layout;
 import android.text.Layout.Alignment;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.StaticLayout;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.style.CharacterStyle;
 import android.view.MotionEvent;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
+import android.widget.AbsListView;
+import android.widget.ListView;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
 
 import com.luxlunae.glk.GLKActivity;
 import com.luxlunae.glk.GLKConstants;
@@ -55,6 +67,7 @@ import com.luxlunae.glk.model.style.GLKStyleSpan;
 import com.luxlunae.glk.model.html.TableSpan;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 import static com.luxlunae.glk.model.stream.window.GLKWindowM.ModifierFlag.FLAG_BG_COLOR_CHANGED;
 import static com.luxlunae.glk.model.stream.window.GLKWindowM.ModifierFlag.FLAG_CLEARED;
@@ -75,6 +88,8 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
     @NonNull
     private ArrayList<Integer> mBufferedInput = new ArrayList<>();
     private boolean mComposing = false;
+    private int mHistoryIndex = -1;
+    private String mHistoryDraft = "";
 
     // OUTPUT
     @NonNull
@@ -152,6 +167,11 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
             return 0;
         }
 
+        if ((key == GLKConstants.keycode_Up || key == GLKConstants.keycode_Down) &&
+                !super.isTerminator(key)) {
+            navigateHistory(key == GLKConstants.keycode_Up ? -1 : 1);
+            return mModel.mInput.length();
+        }
         boolean lineDone = false;
         int len = mModel.mInput.length();
         if (key == GLKConstants.keycode_Delete) {
@@ -328,6 +348,8 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
         if (mModel.lineRequested()) {
             if (mModel.mLineEventCount != mCurLineEvent) {
                 mCurLineEvent = mModel.mLineEventCount;
+                mHistoryIndex = -1;
+                mHistoryDraft = "";
                 if (mComposing) {
                     stopComposing(false);
                 }
@@ -353,6 +375,131 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
     @NonNull
     public String getInputBuffer() {
         return mModel.mInput.toString();
+    }
+
+    @Override
+    public boolean onKeyPreIme(int keyCode, @NonNull KeyEvent event) {
+        return onInputKey(event) || super.onKeyPreIme(keyCode, event);
+    }
+
+    public boolean onInputKey(@NonNull KeyEvent event) {
+        if (!mComposing || !mModel.lineRequested() || mModel.charRequested()) return false;
+        int code = event.getKeyCode();
+        boolean up = code == KeyEvent.KEYCODE_DPAD_UP;
+        boolean down = code == KeyEvent.KEYCODE_DPAD_DOWN;
+        boolean search = code == KeyEvent.KEYCODE_R && event.hasModifiers(KeyEvent.META_CTRL_ON);
+        if (!search && (!(up || down) || !event.hasNoModifiers() ||
+                super.isTerminator(up ? GLKConstants.keycode_Up : GLKConstants.keycode_Down))) return false;
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            if (search) {
+                if (event.getRepeatCount() == 0) post(new Runnable() {
+                    @Override public void run() { showCommandHistory(); }
+                });
+            } else {
+                navigateHistory(up ? -1 : 1);
+            }
+        }
+        return event.getAction() == KeyEvent.ACTION_DOWN || event.getAction() == KeyEvent.ACTION_UP;
+    }
+
+    public void replaceInput(@NonNull String text) {
+        if (!mComposing || !mModel.lineRequested() || mModel.charRequested()) return;
+        mModel.mInput.setLength(0);
+        mModel.mInput.append(text);
+        drawInput();
+        scrollToEnd();
+        invalidate();
+        resetInputConnection();
+    }
+
+    private void navigateHistory(int direction) {
+        ArrayList<String> history = mModel.getCommandHistory();
+        if (history.isEmpty()) return;
+        if (mHistoryIndex < 0) {
+            if (direction > 0) return;
+            mHistoryIndex = history.size();
+            mHistoryDraft = getInputBuffer();
+        }
+        mHistoryIndex = Math.max(0, Math.min(history.size(), mHistoryIndex + direction));
+        replaceInput(mHistoryIndex == history.size() ? mHistoryDraft : history.get(mHistoryIndex));
+        if (mHistoryIndex == history.size()) mHistoryIndex = -1;
+    }
+
+    private void showCommandHistory() {
+        final GLKActivity owner = GLKUtils.getActivityForView(this);
+        if (owner == null || owner.isFinishing()) return;
+        final ArrayList<String> history = mModel.getCommandHistory();
+        final int request = mModel.mLineEventCount;
+        final ArrayAdapter<String> adapter = new ArrayAdapter<>(owner,
+                android.R.layout.simple_list_item_1, new ArrayList<>(history));
+        final EditText filter = new EditText(owner);
+        filter.setSingleLine(true);
+        filter.setHint("Filter commands");
+        filter.setContentDescription("Filter command history");
+        final ListView list = new ListView(owner);
+        list.setAdapter(adapter);
+        list.setStackFromBottom(true);
+        list.setTranscriptMode(AbsListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
+        LinearLayout content = new LinearLayout(owner);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setMinimumHeight(getResources().getDisplayMetrics().heightPixels / 3);
+        content.addView(filter, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        content.addView(list, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+        final AlertDialog dialog = new AlertDialog.Builder(owner)
+                .setTitle("Command history").setView(content)
+                .setNegativeButton("Cancel", null).create();
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mModel.mLineEventCount == request) {
+                    String command = adapter.getItem(position);
+                    if (command != null) {
+                        mHistoryIndex = -1;
+                        replaceInput(command);
+                    }
+                }
+                dialog.dismiss();
+            }
+        });
+        filter.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
+            @Override public void afterTextChanged(Editable text) {
+                String query = text.toString().toLowerCase(Locale.ROOT);
+                ArrayList<String> matches = new ArrayList<>();
+                for (String command : history) {
+                    if (command.toLowerCase(Locale.ROOT).contains(query)) matches.add(command);
+                }
+                adapter.clear();
+                adapter.addAll(matches);
+            }
+        });
+        final View.OnAttachStateChangeListener listener = new View.OnAttachStateChangeListener() {
+            @Override public void onViewAttachedToWindow(View view) { }
+            @Override public void onViewDetachedFromWindow(final View view) {
+                // Screen updates briefly reparent this view, including when the IME resizes it.
+                filter.post(new Runnable() {
+                    @Override public void run() {
+                        if (view.getWindowToken() == null || GLKUtils.getActivityForView(view) != owner) {
+                            dialog.dismiss();
+                        }
+                    }
+                });
+            }
+        };
+        addOnAttachStateChangeListener(listener);
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override public void onDismiss(DialogInterface dialog) {
+                removeOnAttachStateChangeListener(listener);
+            }
+        });
+        dialog.show();
+        filter.setText(getInputBuffer());
+        filter.setSelection(filter.length());
+        filter.requestFocus();
+        if (dialog.getWindow() != null) dialog.getWindow().setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE |
+                        WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
     }
 
     /**

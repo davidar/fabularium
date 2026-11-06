@@ -1113,6 +1113,7 @@ public class GLKInputConnection implements InputConnection {
      */
     @Override
     public boolean sendKeyEvent(@NonNull KeyEvent event) {
+        if (mView instanceof GLKTextBufferV && ((GLKTextBufferV) mView).onInputKey(event)) return true;
         // Our implementation does nothing and returns false.
         if (DEBUG_INPUT_CONNECTION) {
             GLKLogger.debug("GLKInputConnection: sendKeyEvent: " + (char) event.getUnicodeChar());
