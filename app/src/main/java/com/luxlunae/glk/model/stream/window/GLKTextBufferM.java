@@ -20,6 +20,8 @@
 package com.luxlunae.glk.model.stream.window;
 
 import android.graphics.Paint;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.Layout.Alignment;
@@ -46,6 +48,11 @@ import com.luxlunae.glk.model.html.WatchableStringBuilder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.UUID;
+import org.json.JSONArray;
+import org.json.JSONException;
 import java.util.regex.Pattern;
 
 public class GLKTextBufferM extends GLKTextWindowM {
@@ -64,6 +71,7 @@ public class GLKTextBufferM extends GLKTextWindowM {
     public ByteBuffer mInputBB; // the initial byte buffer to which we post final result
     public boolean mIs32Bit;
     private int mHyperlinkValue = GLKConstants.NULL;
+    private ArrayList<String> mCommandHistory;
 
     // OUTPUT
     @NonNull
@@ -90,6 +98,55 @@ public class GLKTextBufferM extends GLKTextWindowM {
         ret = FIND_SINGLE_QUOTE.matcher(ret).replaceAll(REPLACE_SINGLE_QUOTE);
         ret = FIND_DOUBLE_QUOTES.matcher(ret).replaceAll(REPLACE_DOUBLE_QUOTES);
         return ret;
+    }
+
+    @Nullable
+    private SharedPreferences commandPreferences() {
+        if (mModel.mIFID == null) return null;
+        String name = UUID.nameUUIDFromBytes(mModel.mIFID.getBytes(Charset.forName("UTF-8"))).toString();
+        return mModel.getApplicationContext().getSharedPreferences(
+                "commands-" + name + "-" + getRock(), Context.MODE_PRIVATE);
+    }
+
+    private ArrayList<String> loadCommandHistory() {
+        if (mCommandHistory == null) {
+            mCommandHistory = new ArrayList<>();
+            SharedPreferences prefs = commandPreferences();
+            if (prefs != null) {
+                String saved = prefs.getString("history", "[]");
+                try {
+                    JSONArray commands = new JSONArray(saved);
+                    for (int i = Math.max(0, commands.length() - 200); i < commands.length(); i++) {
+                        mCommandHistory.add(commands.getString(i));
+                    }
+                } catch (JSONException invalid) {
+                    GLKLogger.warn("Ignoring malformed command history; retaining it as rejected.");
+                    prefs.edit().putString("rejected", saved).apply();
+                }
+            }
+        }
+        return mCommandHistory;
+    }
+
+    public synchronized ArrayList<String> getCommandHistory() {
+        return new ArrayList<>(loadCommandHistory());
+    }
+
+    public synchronized void rememberCommand(int length) {
+        if (mInputBB == null) return;
+        ByteBuffer input = mInputBB.duplicate();
+        int width = mIs32Bit ? 4 : 1;
+        input.position(0);
+        input.limit(Math.min(Math.max(0, length), input.capacity() / width) * width);
+        String command = mCharsetMgr.getGLKString(input, mIs32Bit);
+        if (command.trim().isEmpty()) return;
+        ArrayList<String> history = loadCommandHistory();
+        if (!history.isEmpty() && command.equals(history.get(history.size() - 1))) return;
+        history.add(command);
+        // retain 200 commands; raise the cap if longer history is needed.
+        if (history.size() > 200) history.remove(0);
+        SharedPreferences prefs = commandPreferences();
+        if (prefs != null) prefs.edit().putString("history", new JSONArray(history).toString()).apply();
     }
 
     public boolean hasShownHTML() {
