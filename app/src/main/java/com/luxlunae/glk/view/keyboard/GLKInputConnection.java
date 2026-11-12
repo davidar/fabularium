@@ -521,25 +521,28 @@ public class GLKInputConnection implements InputConnection {
             if (cb > b) b = cb;
         }
 
-        int deleted = 0;
+        if (a >= 0 && b >= 0) {
+            int deleted = 0;
 
-        if (beforeLength > 0) {
-            int start = a - beforeLength;
-            if (start < 0) start = 0;
-            content.delete(start, a);
-            deleted = a - start;
-        }
+            if (beforeLength > 0) {
+                int start = a - beforeLength;
+                if (start < 0) start = 0;
+                content.delete(start, a);
+                deleted = a - start;
+            }
 
-        if (afterLength > 0) {
-            b = b - deleted;
+            if (afterLength > 0) {
+                b = b - deleted;
 
-            int end = b + afterLength;
-            if (end > content.length()) end = content.length();
+                int end = b + afterLength;
+                if (end > content.length()) end = content.length();
 
-            content.delete(b, end);
+                content.delete(b, end);
+            }
         }
 
         endBatchEdit();
+        syncInputBuffer(false);
 
         return true;
     }
@@ -627,6 +630,7 @@ public class GLKInputConnection implements InputConnection {
         }
 
         endBatchEdit();
+        syncInputBuffer(false);
 
         return true;
     }
@@ -1113,11 +1117,48 @@ public class GLKInputConnection implements InputConnection {
      */
     @Override
     public boolean sendKeyEvent(@NonNull KeyEvent event) {
-        // Our implementation does nothing and returns false.
-        if (DEBUG_INPUT_CONNECTION) {
-            GLKLogger.debug("GLKInputConnection: sendKeyEvent: " + (char) event.getUnicodeChar());
+        int keyCode = event.getKeyCode();
+        if (keyCode != KeyEvent.KEYCODE_DEL && keyCode != KeyEvent.KEYCODE_FORWARD_DEL) {
+            return false;
         }
-        return false;
+        if (!event.hasNoModifiers() && !event.hasModifiers(KeyEvent.META_SHIFT_ON)) {
+            return false;
+        }
+        boolean forwardDelete = keyCode == KeyEvent.KEYCODE_FORWARD_DEL;
+        if (event.getAction() != KeyEvent.ACTION_DOWN) {
+            return true;
+        }
+
+        Editable content = getEditable();
+        if (content == null) {
+            return false;
+        }
+        int start = Selection.getSelectionStart(content);
+        int end = Selection.getSelectionEnd(content);
+        if (start < 0 || end < 0) {
+            return true;
+        }
+        if (start > end) {
+            int tmp = start;
+            start = end;
+            end = tmp;
+        }
+        if (start == end) {
+            if (forwardDelete) {
+                end = findIndexForward(content, end, 1);
+                if (end == INVALID_INDEX) return true;
+            } else {
+                start = findIndexBackward(content, start, 1);
+                if (start == INVALID_INDEX) return true;
+            }
+        }
+        if (start < end) {
+            beginBatchEdit();
+            content.delete(start, end);
+            endBatchEdit();
+            syncInputBuffer(false);
+        }
+        return true;
     }
 
     /**
