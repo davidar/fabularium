@@ -147,6 +147,13 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
     }
 
     @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        boolean atEnd = isAtEnd();
+        super.onSizeChanged(w, h, oldw, oldh);
+        updateScroll(atEnd);
+    }
+
+    @Override
     public int sendKey(int key) {
         if (!mComposing) {
             return 0;
@@ -199,6 +206,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
 
     @Override
     public void updateContents() {
+        boolean atEnd = isAtEnd();
         if (mSyncBGColor && mModel.isFlagSet(FLAG_BG_COLOR_CHANGED)) {
             // If this text buffer's parent is the GLKScreen or a GLKPair
             // that has the GLKScreen as it's parent, and it is the main
@@ -255,6 +263,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
 
         // If there's nothing to flush, then return
         if (mOutputBuffer.length() == 0) {
+            updateScroll(atEnd);
             return;
         }
 
@@ -269,26 +278,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
         // Finish off the last style block
         mModel.endCurrentStyle();
 
-        // Flush the output buffer and scroll as appropriate
-        int y1 = mLayout.getLineTop(Math.max(mLayout.getLineCount() - 2, 0));
         mOutput.append(mOutputBuffer);
-        int y2 = mLayout.getLineBottom(mLayout.getLineCount() - 1);
-
-        // For GLK text layout gravity is BOTTOM, but when in TADS HTML mode it
-        // should be TOP...
-        if (mModel.hasShownHTML()) {
-            mVOffset = 0;
-        } else {
-            mVOffset = Math.max(0, mModel.getHeight() - getPaddingTop() - getPaddingBottom() - mLayout.getHeight());
-        }
-
-        if (y2 - getScrollY() > mHeightLessPadding) {
-            // The appended text does not all fit into the display, so
-            // scroll down until: (1) last line of previous text is first line
-            // in the display; OR (2) last line of appended text is last line of
-            // the display - whichever comes first
-            setScrollY(Math.min(y1, y2 - mHeightLessPadding));
-        }
 
         if (mModel.lineRequested() || mModel.charRequested()) {
             // Alert the hosting activity that it should start speaking the
@@ -319,6 +309,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
             updateCursor();
         }
 
+        updateScroll(atEnd);
         invalidate();
     }
 
@@ -382,6 +373,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
      * appear at the end of the text.
      */
     private void drawInput() {
+        boolean atEnd = isAtEnd();
         // Delete old input (if any)
         clearInput();
 
@@ -397,6 +389,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
             }
             updateCursor();
         }
+        updateScroll(atEnd);
     }
 
     private void updateCursor() {
@@ -422,6 +415,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
      * @param userTerminated - whether the user terminated input or our GLK library did.
      */
     private void stopComposing(boolean userTerminated) {
+        boolean atEnd = isAtEnd();
         mComposing = false;
         if (mModel.showCompletedInput()) {
             int len = mOutput.length();
@@ -437,15 +431,24 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
             clearInput();
         }
         mOutput.removeSpan(InputMarker.class);
+        updateScroll(atEnd);
+    }
+
+    private boolean isAtEnd() {
+        return getScrollY() + mHeightLessPadding >= getChildHeight();
     }
 
     private void scrollToEnd() {
-        // Scroll down to the last line of the displayed text
+        updateScroll(true);
+    }
+
+    private void updateScroll(boolean atEnd) {
         if (mLayout != null) {
-            int y2 = mLayout.getLineBottom(mLayout.getLineCount() - 1);
-            if (y2 - getScrollY() > mHeightLessPadding) {
-                scrollTo(0, Math.max(0, y2 - mHeightLessPadding));    // scroll screen down to text entry
-            }
+            // Use the actual viewport: the model may not yet have processed the resize.
+            mVOffset = mModel.hasShownHTML() ? 0 :
+                    Math.max(0, mHeightLessPadding - mLayout.getHeight());
+            scrollTo(getScrollX(), atEnd ? getChildHeight() - mHeightLessPadding : getScrollY());
+            invalidate();
         }
     }
 
@@ -723,7 +726,7 @@ public class GLKTextBufferV extends GLKTextWindowV implements HVScrollView.Scrol
 
     @Override
     public int getChildHeight() {
-        return (mLayout != null) ? mLayout.getHeight() : 0;
+        return (mLayout != null) ? mVOffset + mLayout.getHeight() : 0;
     }
 
     private static class InputMarker {
