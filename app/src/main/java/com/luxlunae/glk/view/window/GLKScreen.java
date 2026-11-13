@@ -36,6 +36,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 
 import com.luxlunae.glk.GLKActivity;
+import com.luxlunae.glk.GLKUtils;
 import com.luxlunae.glk.GLKConstants;
 import com.luxlunae.glk.GLKLogger;
 import com.luxlunae.glk.model.GLKModel;
@@ -338,10 +339,8 @@ public class GLKScreen extends LinearLayout {
 
         // Clear any queued text to speech playback (assuming the user only wants to hear
         // most recent text and wouldn't have generated key events to move onwards otherwise)
-        Context c = getContext();
-        if (c instanceof GLKActivity) {
-            ((GLKActivity) c).silence();
-        }
+        GLKActivity activity = GLKUtils.getActivityForView(this);
+        if (activity != null) activity.silence();
 
         for (int i = 0, sz = mWindows.size(); i < sz; i++) {
             GLKWindowV winV = mWindows.valueAt(i);
